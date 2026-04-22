@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Cookie halves use a clip-path to look like half-circles that lean into
+   each other. We keep this in index.css because clip-path values are
+   verbose and read better here than in a Tailwind arbitrary-value class. */
+.cookie-half {
+  width: 10rem;
+  height: 10rem;
+  background: radial-gradient(circle at 30% 30%, #f2c27a, #a26a2b 80%);
+  box-shadow: inset -6px -6px 12px rgba(0, 0, 0, 0.25),
+              inset 6px 6px 10px rgba(255, 240, 200, 0.5);
+}
+.cookie-half.left {
+  clip-path: polygon(0 0, 100% 0, 50% 100%, 0 100%);
+  border-top-left-radius: 9999px;
+  border-bottom-left-radius: 9999px;
+}
+.cookie-half.right {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 100%);
+  border-top-right-radius: 9999px;
+  border-bottom-right-radius: 9999px;
+}

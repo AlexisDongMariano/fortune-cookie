@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Local secrets — NEVER commit these
+.env
+*.pem
+*.key
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
