@@ -46,6 +46,8 @@ python seed_fortunes.py                # creates ./fortune.db + seed rows
 uvicorn app.main:app --reload
 ```
 
+**Optional — enable the AI fortunes:** open `.env` and set `OPENAI_API_KEY=sk-...`. Leave it blank (or skip entirely) and the app will use the seed messages — both paths work. Whichever one you get is labelled in the UI (✨ AI vs 📜 Default).
+
 Now open:
 
 - **API docs:** http://localhost:8000/docs — Swagger UI with every endpoint. Click *Try it out*.
@@ -61,12 +63,15 @@ Expected output (example):
 
 ```json
 {
-  "id": 1024,
+  "id": 21,
   "message": "Your next commit will be your best one.",
   "created_at": "2026-04-21T10:30:41.123456",
-  "is_favorite": false
+  "is_favorite": false,
+  "source": "seed"
 }
 ```
+
+`source` will be `"ai"` if you've configured an OpenAI key and the call succeeded, `"seed"` otherwise.
 
 ### Troubleshooting
 | Symptom | Fix |
@@ -74,6 +79,8 @@ Expected output (example):
 | `ModuleNotFoundError: No module named 'app'` | You're running uvicorn from the wrong folder. Be inside `backend/`. |
 | `No fortunes seeded. Run …` | You forgot step `python seed_fortunes.py`. |
 | Port 8000 in use | `uvicorn app.main:app --reload --port 8001` (then update `vite.config.js` proxy) |
+| `OperationalError: no such column: fortunes.source` | You have an old DB from before the AI column was added. `rm fortune.db && python seed_fortunes.py`. In prod you'd use Alembic. |
+| All fortunes show 📜 Default even with key set | Look at the uvicorn terminal for `OpenAI call failed…`. Most common: invalid key, no network, rate limit. |
 
 ---
 
@@ -95,6 +102,49 @@ Open http://localhost:5173. Click the cookie. Magic.
 | `Failed to fetch /api/...` | Backend isn't running. Check terminal 1. |
 | CORS error in browser console | Proxy misconfigured. Confirm `vite.config.js` has `proxy: { "/api": "http://localhost:8000" }` and restart `npm run dev`. |
 | Blank page, console: "React refresh runtime" | `rm -rf node_modules .vite && npm install` |
+
+---
+
+## 3.5. Toggling the AI source + verifying both paths
+
+You don't need a real OpenAI key to work on this project, but verifying **both** paths is part of Week 1 DoD.
+
+**Path A — seed fallback (default, free):**
+
+```bash
+# in backend/.env
+OPENAI_API_KEY=
+```
+
+Restart the backend, click the cookie. The paper shows a 📜 **Default** badge. Backend logs (terminal) stay quiet.
+
+**Path B — live AI:**
+
+1. Get a key from https://platform.openai.com/api-keys (adds a $5 minimum on first use; each fortune costs ~$0.0001 on `gpt-4o-mini`).
+2. Put it in `backend/.env`:
+   ```
+   OPENAI_API_KEY=sk-...your-key...
+   OPENAI_MODEL=gpt-4o-mini
+   OPENAI_TIMEOUT_SECONDS=5
+   ```
+3. Restart uvicorn. Click the cookie. Paper now shows ✨ **AI** in an indigo pill.
+
+**Path C — force a failure (to prove the fallback):**
+
+Set a deliberately bad key:
+
+```
+OPENAI_API_KEY=sk-not-a-real-key
+```
+
+Click the cookie. You should see:
+- The 📜 **Default** badge in the UI (fallback kicked in).
+- A single warning line in the backend terminal: `OpenAI call failed, falling back to seed: …`.
+- Response time under 6 seconds (the 5 s timeout + DB write).
+
+That warning log is how an on-call SRE would notice "OpenAI is unhappy" in production. In Chapter 09 (observability) you'll turn this into a Prometheus counter.
+
+**Rule:** never commit your `.env`. It's already in `.gitignore`. Check with `git status` before every commit.
 
 ---
 

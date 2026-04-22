@@ -2,7 +2,7 @@
 
 A full-stack web app you build end-to-end to learn **Programming, CI/CD, Docker, Ansible, Terraform, AWS, Prometheus/Grafana, and Kubernetes** in one cohesive portfolio piece.
 
-**Stack:** FastAPI · PostgreSQL · React + Vite + Tailwind · Docker · GitHub Actions · Ansible · Terraform · AWS EC2 *(or Azure VM — see appendix)* · Prometheus · Grafana · (optional) Kubernetes.
+**Stack:** FastAPI · PostgreSQL · React + Vite + Tailwind · OpenAI *(optional, with graceful fallback)* · Docker · GitHub Actions · Ansible · Terraform · AWS EC2 *(or Azure VM — see appendix)* · Prometheus · Grafana · (optional) Kubernetes.
 
 ---
 
@@ -92,6 +92,8 @@ npm run dev                      # http://localhost:5173
 ```
 
 Click the cookie. It breaks. A fortune appears. Check the history panel for past fortunes. That's the MVP.
+
+**AI integration:** if `OPENAI_API_KEY` is set in `backend/.env`, each fortune is generated fresh by an LLM and marked with a ✨ **AI** badge. If the key is missing, the app has a network issue, or OpenAI is down, the app silently falls back to a curated seed collection and shows a 📜 **Default** badge. You can clone the repo with zero setup and it still works.
 
 ---
 

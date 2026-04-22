@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
+import SourceBadge from "./SourceBadge.jsx";
 
 /**
  * MessageHistory
@@ -59,9 +60,12 @@ export default function MessageHistory({ refreshKey }) {
             </button>
             <div className="flex-1">
               <p className="text-stone-800">{item.message}</p>
-              <p className="text-xs text-stone-400 mt-1">
-                {new Date(item.created_at).toLocaleString()}
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <SourceBadge source={item.source} size="xs" />
+                <span className="text-xs text-stone-400">
+                  {new Date(item.created_at).toLocaleString()}
+                </span>
+              </div>
             </div>
           </li>
         ))}

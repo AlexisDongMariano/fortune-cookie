@@ -4,6 +4,7 @@ Models (models.py) describe the DB. Schemas describe the API.
 Keeping them separate lets you evolve either side independently.
 """
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,6 +18,7 @@ class FortuneRead(BaseModel):
     message: str
     created_at: datetime
     is_favorite: bool
+    source: Literal["ai", "seed"]
 
 
 class FortuneCreate(BaseModel):

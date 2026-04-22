@@ -19,13 +19,13 @@
                        │      FastAPI backend         │
                        │     http://localhost:8000    │
                        │                              │
-                       │  /api/fortunes/random        │
-                       │  /api/fortunes               │
-                       │  /api/fortunes/{id}/favorite │
-                       │  /healthz                    │
-                       └──────────────┬───────────────┘
-                                      │  SQLAlchemy ORM
-                                      ▼
+                       │  /api/fortunes/random  ──────┼──▶ ┌────────────────┐
+                       │  /api/fortunes               │    │ OpenAI API     │
+                       │  /api/fortunes/{id}/favorite │    │ (optional;     │
+                       │  /healthz                    │ ◀──│ 5s timeout →   │
+                       └──────────────┬───────────────┘    │ fall back to   │
+                                      │  SQLAlchemy ORM    │ seed on fail)  │
+                                      ▼                    └────────────────┘
                        ┌──────────────────────────────┐
                        │   PostgreSQL  (or SQLite)    │
                        │      table: fortunes         │
@@ -53,6 +53,7 @@ In **production** (Week 3+) this becomes:
 |-----------|----------|------|-----------|
 | **Frontend** | JS (React + Vite) | Renders UI, calls the API | `frontend/src/App.jsx`, `components/*.jsx`, `api.js` |
 | **Backend** | Python 3.11 (FastAPI) | Business logic + HTTP API | `backend/app/main.py`, `routers/fortunes.py` |
+| **AI service** | Python | Calls OpenAI with fallback-to-seed | `backend/app/services/ai.py` |
 | **Database** | PostgreSQL (or SQLite for dev) | Persistence | Managed by SQLAlchemy in `models.py` |
 | **Config** | .env files | Secrets + switches | `backend/.env` (gitignored) |
 
@@ -76,22 +77,34 @@ Trace this on paper. If you can't draw it, read the code until you can.
 
 (5) FastAPI router matches  GET /api/fortunes/random
     └─ routers/fortunes.py  get_random_fortune()
+         └─ calls services/ai.generate_fortune(db)
 
-(6) SQLAlchemy query:
-       SELECT * FROM fortunes WHERE id <= 1000 ORDER BY RANDOM() LIMIT 1
+(6) generate_fortune():
+      if OPENAI_API_KEY is set:
+          try  POST https://api.openai.com/v1/chat/completions  (5s timeout)
+          on success → return (ai_text, "ai")
+          on failure → log warning, fall through
+      fallback:
+          SELECT * FROM fortunes
+          WHERE created_at < '2010-01-01'          -- seed rows only
+          ORDER BY RANDOM() LIMIT 1
+          return (seed_message, "seed")
 
-(7) New row inserted: a "draw" record with now() timestamp
-       INSERT INTO fortunes (message, created_at, is_favorite) ...
+(7) New row inserted: a "draw" record
+       INSERT INTO fortunes (message, created_at, is_favorite, source)
+       VALUES (..., now(), false, 'ai' | 'seed')
 
-(8) JSON returned via Pydantic schema FortuneRead
+(8) JSON returned via Pydantic schema FortuneRead (includes `source`)
 
 (9) React sets state "cracked" + stores `fortune`
     CSS animations run:
       - cookie halves slide/rotate outward
       - paper pops up with the text
+      - <SourceBadge source={fortune.source}/> renders ✨ AI or 📜 Default
 
 (10) onNewFortune callback bumps refreshKey in App.jsx
      └─ MessageHistory re-fetches via useEffect
+         (each history item also shows its SourceBadge)
 ```
 
 ---
@@ -101,22 +114,27 @@ Trace this on paper. If you can't draw it, read the code until you can.
 **One table**, intentionally small for the MVP:
 
 ```
-┌─────────────────────────────────────────────────┐
-│ fortunes                                        │
-├──────────────┬──────────────┬───────────────────┤
-│ id           │ INTEGER PK   │                   │
-│ message      │ VARCHAR(280) │ not null          │
-│ created_at   │ DATETIME     │ not null, indexed │
-│ is_favorite  │ BOOLEAN      │ default false     │
-└──────────────┴──────────────┴───────────────────┘
+┌──────────────────────────────────────────────────────┐
+│ fortunes                                             │
+├──────────────┬──────────────┬────────────────────────┤
+│ id           │ INTEGER PK   │                        │
+│ message      │ VARCHAR(280) │ not null               │
+│ created_at   │ DATETIME     │ not null, indexed      │
+│ is_favorite  │ BOOLEAN      │ default false          │
+│ source       │ VARCHAR(16)  │ 'ai' | 'seed'          │
+└──────────────┴──────────────┴────────────────────────┘
 ```
 
 **Design note — why one table?** For the MVP we overload `fortunes` with two meanings:
 
-1. **Seed rows** (ids ≤ 1000, `created_at = 2000-01-01`) → the pool we pick from.
-2. **Draw rows** (ids > 1000, `created_at = now()`) → the user's history.
+1. **Seed rows** (`created_at < 2010-01-01` sentinel) → the pool we fall back to.
+2. **Draw rows** (`created_at >= 2010-01-01`, i.e. real user draws) → history.
 
-This keeps the starter code simple. In **Stage 03** ("Feature development") you'll be asked to refactor it into two proper tables (`fortune_messages` and `fortune_draws`) and learn about migrations. That refactor is a great "before/after" story on your resume.
+The `source` column tells you *where a draw came from*:
+- `source = "ai"` → OpenAI generated this message live.
+- `source = "seed"` → either a seed row, or a draw that fell back to seed because the AI call failed.
+
+In **Stage 03** ("Feature development") you'll be asked to refactor into two proper tables (`fortune_messages` and `fortune_draws`) and learn about migrations. That refactor is a great "before/after" story on your resume.
 
 ---
 
@@ -132,8 +150,10 @@ app/
 ├── models.py          SQLAlchemy ORM classes  (→ DB tables)
 ├── schemas.py         Pydantic classes       (→ JSON payloads)
 ├── main.py            FastAPI app, CORS, router wiring
-└── routers/
-    └── fortunes.py    HTTP endpoints
+├── routers/
+│   └── fortunes.py    HTTP endpoints
+└── services/
+    └── ai.py          OpenAI call + automatic fallback to seed
 
 requirements.txt       Python deps (pinned versions)
 seed_fortunes.py       one-shot script to insert seed messages
@@ -146,7 +166,8 @@ seed_fortunes.py       one-shot script to insert seed messages
 |-------|----------------|---------------|
 | `models.py` | Tables | Only columns + relationships. No logic. |
 | `schemas.py` | API contract | What goes in/out over JSON |
-| `routers/*.py` | Endpoint wiring | Read request → call model → return schema |
+| `routers/*.py` | Endpoint wiring | Read request → call service/model → return schema |
+| `services/*.py` | External calls & business logic | Network, LLM, integrations — always with a fallback |
 | `database.py` | Plumbing | No business logic |
 | `config.py` | Environment | One source of truth for settings |
 
@@ -188,11 +209,42 @@ package.json           Node deps
 
 ---
 
+## AI integration + graceful fallback (important)
+
+The `/api/fortunes/random` endpoint has **three** possible outcomes, and the code is deliberately structured so the router doesn't know which one happened:
+
+| Scenario | Who handles it | Returned `source` |
+|----------|----------------|-------------------|
+| `OPENAI_API_KEY` is set and the call succeeds | `services/ai._call_openai()` | `"ai"` |
+| Key set, but call throws (timeout, 429, 500, invalid key, no network…) | Caught inside `_call_openai`, logged, returns `None` | `"seed"` |
+| Key missing or empty string | `_call_openai` returns `None` immediately | `"seed"` |
+
+The router just calls `generate_fortune(db)` and always gets a `(message, source)` tuple. It never has to deal with exceptions from OpenAI. This is the **graceful-degradation pattern** — a core SRE skill. Memorize this phrase: *"a failing dependency should never take down the whole service."*
+
+The frontend surfaces the result via `<SourceBadge>`:
+
+- ✨ **AI** (indigo gradient) — message came fresh from the LLM.
+- 📜 **Default** (stone pill) — message came from the seed collection (either no key or the call failed).
+
+Users always get *a* fortune; they just know where it came from.
+
+**Key code locations:**
+- Service: `backend/app/services/ai.py`
+- Endpoint wiring: `backend/app/routers/fortunes.py::get_random_fortune`
+- Badge component: `frontend/src/components/SourceBadge.jsx`
+- Config flags: `backend/app/config.py` (`openai_api_key`, `openai_model`, `openai_timeout_seconds`)
+
+---
+
 ## What happens where (cheat sheet)
 
 | Want to change… | Edit this |
 |-----------------|-----------|
-| the text of a fortune | `backend/seed_fortunes.py`, rerun it |
+| the text of a seed fortune | `backend/seed_fortunes.py`, rerun it |
+| the AI system prompt / tone | `backend/app/services/ai.py` (`SYSTEM_PROMPT`) |
+| the OpenAI model | `OPENAI_MODEL` in `.env` (default `gpt-4o-mini`) |
+| the AI call timeout | `OPENAI_TIMEOUT_SECONDS` in `.env` |
+| the badge colors / icons | `frontend/src/components/SourceBadge.jsx` |
 | the API endpoint shape | `backend/app/schemas.py` + `routers/fortunes.py` |
 | the cookie's look | `frontend/src/index.css` + `tailwind.config.js` |
 | the animation timing | `tailwind.config.js` keyframes |

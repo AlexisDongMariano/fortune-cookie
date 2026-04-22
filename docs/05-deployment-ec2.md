@@ -152,6 +152,12 @@ pip install -r requirements.txt
 cat > .env <<EOF
 DATABASE_URL=postgresql+psycopg2://fortune:changeme_before_prod@localhost:5432/fortune
 CORS_ORIGINS=http://<EC2_PUBLIC_IP>,https://<EC2_PUBLIC_IP>
+
+# Optional: enable AI-generated fortunes. Leave blank to use seed messages.
+# Get a key at https://platform.openai.com/api-keys
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_TIMEOUT_SECONDS=5
 EOF
 
 python seed_fortunes.py
@@ -312,11 +318,13 @@ This sequence is boring, error-prone, and will be replaced by an Ansible playboo
 ## 10. Post-deploy hardening (do before putting it on your resume)
 
 - [ ] Change the Postgres password from `changeme_before_prod`.
+- [ ] Ensure `/srv/fortune/backend/.env` is `chmod 600` (contains the OpenAI key).
 - [ ] Move SSH to key-only: `PasswordAuthentication no` in `/etc/ssh/sshd_config`, then `sudo systemctl reload ssh`.
 - [ ] Disable root login: `PermitRootLogin no`.
 - [ ] UFW firewall: `sudo ufw allow 22 && sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw enable`.
 - [ ] (Optional) Allocate an **Elastic IP** so restarts don't change the address.
 - [ ] (Optional) Point a domain (Route 53 or Namecheap) + Let's Encrypt via `certbot --nginx`.
+- [ ] (Optional) Set a usage cap on your OpenAI account so a runaway loop can't bill you.
 
 ---
 

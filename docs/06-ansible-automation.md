@@ -101,6 +101,9 @@ This re-creates Chapter 05 in declarative form.
     db_name: fortune
     db_user: fortune
     db_password: "{{ lookup('env', 'DB_PASSWORD') | default('changeme_before_prod', true) }}"
+    # Optional. Leave the env var unset to ship with seed-only mode.
+    openai_api_key: "{{ lookup('env', 'OPENAI_API_KEY') | default('', true) }}"
+    openai_model: "gpt-4o-mini"
 
   tasks:
     # ---- System packages ----
@@ -166,13 +169,17 @@ This re-creates Chapter 05 in declarative form.
         virtualenv_command: python3 -m venv
 
     - name: Write backend .env
+      no_log: true          # don't leak OPENAI_API_KEY into ansible output
       copy:
         dest: "{{ app_dir }}/backend/.env"
         owner: ubuntu
-        mode: "0640"
+        mode: "0600"
         content: |
           DATABASE_URL=postgresql+psycopg2://{{ db_user }}:{{ db_password }}@localhost:5432/{{ db_name }}
           CORS_ORIGINS=http://{{ ansible_host }}
+          OPENAI_API_KEY={{ openai_api_key }}
+          OPENAI_MODEL={{ openai_model }}
+          OPENAI_TIMEOUT_SECONDS=5
 
     - name: Seed DB (idempotent)
       become_user: ubuntu
@@ -282,7 +289,9 @@ ansible-galaxy collection install community.postgresql
 
 ```bash
 cd deploy
-DB_PASSWORD='a_real_password_here' ansible-playbook site.yml
+DB_PASSWORD='a_real_password_here' \
+OPENAI_API_KEY='sk-...optional, leave unset for seed-only mode...' \
+ansible-playbook site.yml
 ```
 
 First run takes 3–5 min (installs packages, builds frontend). Subsequent runs (10–30 s) only change what changed. That's **idempotency** earning its keep.
@@ -311,6 +320,7 @@ Add GitHub secrets (`Settings → Secrets and variables → Actions`):
 - `EC2_USER` — `ubuntu`.
 - `EC2_SSH_KEY` — paste the **entire content** of `fortune-key.pem`, including `-----BEGIN…`.
 - `DB_PASSWORD` — the real DB password.
+- `OPENAI_API_KEY` — optional; leave empty to deploy in seed-only mode.
 
 Create `.github/workflows/deploy.yml`:
 
@@ -343,6 +353,7 @@ jobs:
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           ansible-playbook \
             -i "${{ secrets.EC2_HOST }}," \

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../api.js";
+import SourceBadge from "./SourceBadge.jsx";
 
 /**
  * FortuneCookie
@@ -64,6 +65,9 @@ export default function FortuneCookie({ onNewFortune }) {
         {stage === "cracked" && fortune && (
           <div className="absolute z-10 animate-paper-pop">
             <div className="bg-white shadow-lg px-6 py-4 rounded-sm border border-amber-200 max-w-xs text-center">
+              <div className="flex justify-center mb-2">
+                <SourceBadge source={fortune.source} />
+              </div>
               <p className="text-stone-800 italic text-lg leading-snug">
                 "{fortune.message}"
               </p>

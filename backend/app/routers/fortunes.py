@@ -1,41 +1,40 @@
 """HTTP endpoints for fortunes.
 
 Each endpoint should be short and delegate the interesting work to
-SQLAlchemy. We keep things explicit rather than clever.
+SQLAlchemy or a service. We keep things explicit rather than clever.
 """
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Fortune
+from ..models import SEED_EPOCH_CUTOFF, Fortune
 from ..schemas import FortuneCreate, FortuneRead
+from ..services.ai import generate_fortune
 
 router = APIRouter(prefix="/api/fortunes", tags=["fortunes"])
 
 
 @router.get("/random", response_model=FortuneRead)
 def get_random_fortune(db: Session = Depends(get_db)):
-    """Return a random fortune and log it as 'drawn' by inserting a history row.
+    """Produce a fresh fortune and record it as a history row.
 
-    Design choice: we store every draw as a new row so the history shows
-    a timeline of *when* each message was revealed, not just the master list.
+    Flow:
+      1. Ask the AI service for a message. The service handles its own
+         fallback internally, so we always get (message, source).
+      2. Persist a new "draw" row with the message + source tag.
+      3. Return it.
     """
-    # Seed rows use low IDs (<=1000) so we can pick randomly from only the
-    # curated pool — not from the history of previously-drawn fortunes.
-    seed_stmt = select(Fortune).where(Fortune.id <= 1000).order_by(func.random()).limit(1)
-    seed = db.execute(seed_stmt).scalar_one_or_none()
-    if seed is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No fortunes seeded. Run `python seed_fortunes.py` first.",
-        )
+    message, source = generate_fortune(db)
 
-    # Record the draw as a new history row (a separate entity conceptually,
-    # but for simplicity we reuse the same table with created_at=now).
-    drawn = Fortune(message=seed.message, created_at=datetime.utcnow(), is_favorite=False)
+    drawn = Fortune(
+        message=message,
+        created_at=datetime.utcnow(),
+        is_favorite=False,
+        source=source,
+    )
     db.add(drawn)
     db.commit()
     db.refresh(drawn)
@@ -44,10 +43,14 @@ def get_random_fortune(db: Session = Depends(get_db)):
 
 @router.get("", response_model=list[FortuneRead])
 def list_fortunes(limit: int = 50, db: Session = Depends(get_db)):
-    """Most recent drawn fortunes first. Seed rows are excluded from history."""
+    """Most recent drawn fortunes first. Seed rows are excluded from history.
+
+    Seeds are written with created_at = SEED_SENTINEL (year 2000). Draws use
+    now(). So `created_at >= SEED_EPOCH_CUTOFF` cleanly separates the two.
+    """
     stmt = (
         select(Fortune)
-        .where(Fortune.id > 1000)
+        .where(Fortune.created_at >= SEED_EPOCH_CUTOFF)
         .order_by(Fortune.created_at.desc())
         .limit(limit)
     )

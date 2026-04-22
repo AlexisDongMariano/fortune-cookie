@@ -195,6 +195,10 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://fortune:${DB_PASSWORD:-fortune}@db:5432/fortune
       CORS_ORIGINS: http://localhost,http://localhost:8080
+      # Passed through from your host shell. Leave empty = seed-only mode.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_TIMEOUT_SECONDS: "5"
     depends_on:
       db:
         condition: service_healthy
@@ -219,7 +223,11 @@ volumes:
 Run the whole stack:
 
 ```bash
+# seed-only mode (free)
 docker compose up --build
+
+# or with AI enabled
+OPENAI_API_KEY=sk-... docker compose up --build
 ```
 
 Open http://localhost:8080. Cookie cracks. You have not installed Python, Node, or Postgres on your laptop (well, the host — the containers have them).

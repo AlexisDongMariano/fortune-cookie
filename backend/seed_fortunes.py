@@ -11,7 +11,7 @@ for the MVP — in Chapter 03 you'll refactor this into a separate
 from datetime import datetime
 
 from app.database import Base, SessionLocal, engine
-from app.models import Fortune
+from app.models import SOURCE_SEED, Fortune
 
 SEED_MESSAGES = [
     "A fresh start will put you on your way.",
@@ -50,7 +50,14 @@ def main():
         # can select only from them via `id <= 1000`.
         for idx, message in enumerate(SEED_MESSAGES, start=1):
             if db.get(Fortune, idx) is None:
-                db.add(Fortune(id=idx, message=message, created_at=datetime(2000, 1, 1)))
+                db.add(
+                    Fortune(
+                        id=idx,
+                        message=message,
+                        created_at=datetime(2000, 1, 1),
+                        source=SOURCE_SEED,
+                    )
+                )
         db.commit()
         print(f"Seeded {len(SEED_MESSAGES)} fortunes.")
     finally:
