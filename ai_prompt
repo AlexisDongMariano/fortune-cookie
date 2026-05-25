@@ -1,0 +1,44 @@
+I am an aspiring Junior DevOps/SRE that has little to no knowledge in the tools. I want to create a project to build my skills and to showcase a portfolio. Utilizing AI how to build skills and build portfolio with agility and will make resume strong. I don't have a project to show yet
+
+Skills that I wanted to build:
+Programming/Scripting
+CI/CD
+Ansible
+Terraform
+Docker
+Git/Github
+
+Later:
+Prometheus & Grafana (Observability)
+
+Must have docs/guides but not necessary, or just optional in the end:
+Kubernetes
+
+Tech Stack that I wanted to use (0 knowledge):
+FastApi
+React
+Tailwind
+PostgreSQL
+
+Generate me an exhaustive and detailed plan (document it in organized way) that I can easily follow to create extend a web app called Fortune Cookie Generator and must include the following:
+1) The basic web app - create me the basic web app and simple frontend - If possible, a fortune cookie animation breaking then revealing a paper with the message inside it. The fortune cookie messages should be saved in database and app should have a section to see the messages (with date time). There should be a detailed document how the written app works, char map diagram, explanation how to extend/build features, etc.
+2) Programming/Coding - exhaustive plan and guidance to allow me to add simple features that I can try implementing on my own on the web app. This allows me to learn how to code, troubleshoot, and use and learn ci/cd. A feature to be added is like hearting/bookmarking/adding to favorites a fortune cookie message.  you decide what I can implement on the features
+3) CI/CD - CI and testing can be opted out. You can generate a comprehensive guidance on this but we will not focus on doing this in this project. Only CD. I am thinking of this in learning stages, like guidance on how to deploy/basic test locally first, then all components in a single AWS ec2 - implement Prometheus Grafana (later in the stages), then implement containerization (docker) and ultimately with Kubernetes (last). Perhaps Ansible and GH actions can help.
+
+
+Rules:
+1) Any code and code suggestions must be simple to understand,  beginner friendly, don't invent your own way of language or solving problems. It must be the recommended and how industry do it.
+2) Similar to #1, any structure, solutions, tools, etc., must be industry standard, how professional and senior engineers/architects do it.
+3) All documentations must be easy to understand and follow, concise yet fully detailed and comprehensive, and yet actionable
+4) Documents, exhaustive guidance, must be independent on it's own as it is exhaustive and will have the complete guidance or roadmap - engineers can follow on their own or a reference document can be fed to ai/llm to help engineer continue where left off or if the context chat is lost, engineer can resume and ai can do it's job by simply pointing a reference point/chapter/stage,etc. Document/guide can be split into different documents with one master document to reference all, one master document that can be fed to ai to help the engineer get all the context. Multiple documents can be example detailed into the roadmap/plan, another document would be the guidance to the actual web app building, guiding to create the features step by step, another would be guidance in hosting and basic testing in local, hosting in Azure, Guidance in scripting like for bash/ansible/terraform/docker, and other tools
+5) Take the time to be thorough in doing what is asked. 
+6) Give comprehensive tips and guidance on how to do, how to solve, how to implement, provide suggested articles/urls to follow to solve if necessary, and we can have periodic checking of code if the code is up to standards.
+7) I have 0 knowledge at React/CSS or terribly weak frontend in general. We can target a feasibly appealing/acceptable frontend
+8) You can implement ideas/suggestions to the web app like features to make it professional, resume-worthy, and up to standards, and also the learning guidance/path for the ci/cd - this is the utmost priority
+9) If possible, make this a 4-6 week roadmap, and includes milestones, end evaluation criteria. Add checkpoints, use tables/diagram character map where helpful. Keep explanations concise, focus on execution. Focus on practical, production-relevant skills (not theory-heavy). Must be SRE and DevOps best practices
+10) Assume I have 1-3 hours per day
+11) Avoid outdated tools
+12) My focus is agility in having a project/portfolio ready while I'm able to learn.
+
+
+I trust that you will give me something that will help transform from a beginner to a professional level of skill.
